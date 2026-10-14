@@ -1,0 +1,16 @@
+open A
+open B
+close B
+close A
+error: error bad header
+open A
+open B
+close B
+close A
+error: runtime
+open A
+open B
+close B
+close A
+error: runtime
+ok=0 failed=3

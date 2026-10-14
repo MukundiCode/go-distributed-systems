@@ -1,0 +1,46 @@
+{
+  "course": "go-intermediate",
+  "language": "go",
+  "language_id": 1060,
+  "entrypoint": "main.go",
+  "version": 1,
+  "content_hash": "6d67cbcda5d5a62f",
+  "lessons": [
+    {
+      "slug": "interfaces",
+      "tests_hash": "bed4432ce40c"
+    },
+    {
+      "slug": "errors",
+      "tests_hash": "6b9c3a86ad41"
+    },
+    {
+      "slug": "goroutines",
+      "tests_hash": "ba7def687f18"
+    },
+    {
+      "slug": "channels",
+      "tests_hash": "811fdbd38221"
+    },
+    {
+      "slug": "defer",
+      "tests_hash": "e8b7840fe356"
+    },
+    {
+      "slug": "pointer-receivers",
+      "tests_hash": "cdf9703c7e91"
+    },
+    {
+      "slug": "embedding",
+      "tests_hash": "2ee3ee059552"
+    },
+    {
+      "slug": "select",
+      "tests_hash": "27b1f03c1c14"
+    },
+    {
+      "slug": "sync",
+      "tests_hash": "4d882b66eaf2"
+    }
+  ]
+}

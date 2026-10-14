@@ -1,0 +1,5 @@
+square 5 area=25
+rect 3x4 area=12
+tri 6x4 area=12
+rects=1 squares=1 tris=1
+unknown: circle

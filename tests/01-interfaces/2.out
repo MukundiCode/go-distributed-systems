@@ -1,0 +1,5 @@
+square 3 area=9
+rect 1x4 area=4
+square 2 area=4
+tri 4x2 area=4
+rects=1 squares=2 tris=1

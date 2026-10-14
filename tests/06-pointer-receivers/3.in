@@ -1,0 +1,4 @@
+open kim
+deposit kim 10
+withdraw kim 11
+report

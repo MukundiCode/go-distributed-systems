@@ -1,0 +1,4 @@
+open till
+deposit till 5
+deposit till 7
+report

@@ -1,0 +1,6 @@
+open ann
+open bob
+deposit ann 100
+withdraw ann 30
+transfer ann bob 50
+report

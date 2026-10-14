@@ -1,0 +1,11 @@
+open A
+open B
+close B
+close A
+error: runtime
+open A
+open B
+close B
+close A
+error: string disk full
+ok=0 failed=2

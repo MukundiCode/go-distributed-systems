@@ -1,0 +1,16 @@
+open A
+open B
+close B
+close A
+result: 3
+open A
+open B
+close B
+close A
+result: y
+open A
+open B
+close B
+close A
+result: fine
+ok=3 failed=0
