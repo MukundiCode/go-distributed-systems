@@ -11,6 +11,87 @@ import (
 
 // TODO: the Shape interface (Area() int and Name() string), the three
 // shape types, their String methods, and the sortable slice type.
+type Rect struct {
+	w int
+	h int
+}
+
+func (c Rect) Area() int {
+	return c.w * c.h
+}
+
+func (c Rect) Name() string {
+	return "rect"
+}
+
+func (c Rect) String() string {
+	return fmt.Sprintf("rect %dx%d area=%d", c.w, c.h, c.Area())
+}
+
+type Square struct {
+	s int
+}
+
+func (c Square) Area() int {
+	return c.s * c.s
+}
+
+func (c Square) Name() string {
+	return "square"
+}
+
+func (c Square) String() string {
+	return fmt.Sprintf("square %d area=%d", c.s, c.Area())
+}
+
+type Tri struct {
+	b int
+	h int
+}
+
+func (c Tri) Area() int {
+	return (c.b * c.h) / 2
+}
+
+func (c Tri) Name() string {
+	return "tri"
+}
+
+func (c Tri) String() string {
+	return fmt.Sprintf("tri %dx%d area=%d", c.b, c.h, c.Area())
+}
+
+type Unknown struct {
+	name string
+}
+
+func (Unknown) Area() int {
+	return 0
+}
+
+func (c Unknown) Name() string {
+	return c.name
+}
+
+func (c Unknown) String() string {
+	return fmt.Sprintf("unknown: " + c.name)
+}
+
+type Shape interface {
+	Area() int
+	Name() string
+}
+
+type byShape []Shape
+
+func (s byShape) Len() int { return len(s) }
+func (s byShape) Less(i, j int) bool {
+	if s[i].Area() == s[j].Area() {
+		return s[i].Name() > s[j].Name()
+	}
+	return s[i].Area() < s[j].Area()
+}
+func (s byShape) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
 // num returns word i of a split line as an int (0 if the word is missing).
 func num(f []string, i int) int {
@@ -38,6 +119,49 @@ func main() {
 	// TODO: turn each line into a Shape (or remember its unknown kind),
 	// sort, print the shapes, the count line, then the unknown kinds.
 	_ = lines
-	_ = num
-	fmt.Println("TODO")
+	num := len(lines)
+	shapes := make([]Shape, num)
+	rectCount, sqCount, triCount := 0, 0, 0
+
+	for i, val := range lines {
+		name := val[0]
+		switch name {
+		case "rect":
+			w, _ := strconv.Atoi(val[1])
+			h, _ := strconv.Atoi(val[2])
+			shapes[i] = Rect{w, h}
+			rectCount++
+		case "square":
+			s, _ := strconv.Atoi(val[1])
+			shapes[i] = Square{s}
+			sqCount++
+		case "tri":
+			b, _ := strconv.Atoi(val[1])
+			h, _ := strconv.Atoi(val[2])
+			shapes[i] = Tri{b, h}
+			triCount++
+		default:
+			shapes[i] = Unknown{name}
+		}
+
+	}
+
+	sort.Sort(byShape(shapes))
+
+	shouldPrintTotals := true
+	for i := len(shapes) - 1; i >= 0; i-- {
+		switch shapes[i].(type) {
+		case Rect, Tri, Square:
+			fmt.Println(shapes[i])
+		case Unknown:
+			if shouldPrintTotals {
+				fmt.Printf("rects=%d squares=%d tris=%d\n", rectCount, sqCount, triCount)
+			}
+			shouldPrintTotals = false
+			fmt.Println(shapes[i])
+		}
+	}
+	if shouldPrintTotals {
+		fmt.Printf("rects=%d squares=%d tris=%d\n", rectCount, sqCount, triCount)
+	}
 }
