@@ -2,197 +2,117 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 )
 
-// TODO: the Shape interface (Area() int and Name() string), the three
-// shape types, their String methods, and the sortable slice type.
-type Rect struct {
-	w   int
-	h   int
-	idx int
+// A blank (or whitespace-only) line.
+var ErrEmpty = errors.New("empty line")
+
+// A non-blank line that does not have exactly three fields.
+var ErrFields = errors.New("wrong field count")
+
+// An age or score outside its allowed range.
+type RangeError struct {
+	Field    string
+	Min, Max int
+	Got      int
 }
 
-func (c Rect) Area() int {
-	return c.w * c.h
+func (e RangeError) Error() string {
+	return fmt.Sprintf("range: %s %d not in %d..%d", e.Field, e.Got, e.Min, e.Max)
 }
 
-func (c Rect) Name() string {
-	return "rect"
+type ParseError struct {
+	word string
 }
 
-func (c Rect) String() string {
-	return fmt.Sprintf("rect %dx%d area=%d", c.w, c.h, c.Area())
+func (e ParseError) Error() string {
+	return fmt.Sprintf("parse: %s", e.word)
 }
 
-func (c Rect) Idx() int {
-	return c.idx
-}
-
-type Square struct {
-	s   int
-	idx int
-}
-
-func (c Square) Area() int {
-	return c.s * c.s
-}
-
-func (c Square) Name() string {
-	return "square"
-}
-
-func (c Square) String() string {
-	return fmt.Sprintf("square %d area=%d", c.s, c.Area())
-}
-
-func (c Square) Idx() int {
-	return c.idx
-}
-
-type Tri struct {
-	b   int
-	h   int
-	idx int
-}
-
-func (c Tri) Area() int {
-	return (c.b * c.h) / 2
-}
-
-func (c Tri) Name() string {
-	return "tri"
-}
-
-func (c Tri) String() string {
-	return fmt.Sprintf("tri %dx%d area=%d", c.b, c.h, c.Area())
-}
-
-func (c Tri) Idx() int {
-	return c.idx
-}
-
-type Unknown struct {
-	name string
-	idx  int
-}
-
-func (Unknown) Area() int {
-	return 0
-}
-
-func (c Unknown) Name() string {
-	return c.name
-}
-
-func (c Unknown) String() string {
-	return fmt.Sprintf("unknown: " + c.name)
-}
-
-func (c Unknown) Idx() int {
-	return c.idx
-}
-
-type Shape interface {
-	Area() int
-	Name() string
-	Idx() int
-}
-
-type byShape []Shape
-
-func (s byShape) Len() int { return len(s) }
-func (s byShape) Less(i, j int) bool {
-	_, ok := s[j].(Unknown)
-	if ok {
-		_, ok = s[i].(Unknown)
-		if ok {
-			return s[i].Idx() > s[j].Idx()
-		}
+// check validates one line "name age score" and returns the name, or the FIRST
+// problem found: ErrEmpty for a blank line, ErrFields for a line without exactly
+// three fields, then age (parse, then range 0..120), then score (parse, then
+// range 0..100).
+func check(line string) (string, error) {
+	// TODO: use strings.Fields and strconv.Atoi; wrap parse failures with %w
+	split := strings.Fields(line)
+	// check if empty
+	if len(split) == 0 {
+		return "", ErrEmpty
 	}
-	if s[i].Area() == s[j].Area() {
-		if s[i].Name() == s[j].Name() {
-			return s[i].Idx() > s[j].Idx()
-		}
-		return s[i].Name() > s[j].Name()
+	// check if fields is 3
+	if len(split) != 3 {
+		return "", ErrFields
 	}
-	return s[i].Area() < s[j].Area()
-}
-func (s byShape) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-
-// num returns word i of a split line as an int (0 if the word is missing).
-func num(f []string, i int) int {
-	if i >= len(f) {
-		return 0
+	// check if i1 and i2 parse
+	age, err := strconv.Atoi(split[1])
+	if err != nil {
+		return "", ParseError{split[1]}
 	}
-	n, _ := strconv.Atoi(f[i])
-	return n
+	// check if age in range
+	if age < 0 || age > 120 {
+		return "", RangeError{"age", 0, 120, age}
+	}
+
+	score, err := strconv.Atoi(split[2])
+	if err != nil {
+		return "", ParseError{split[2]}
+	}
+
+	if score < 0 || score > 150 {
+		return "", RangeError{"score", 0, 150, score}
+	}
+
+	return split[0], nil
 }
 
-// keeps the sort import alive until you use it
-var _ = sort.Stable
+// validate adds the line number. Do not change it.
+func validate(n int, line string) (string, error) {
+	name, err := check(line)
+	if err != nil {
+		return "", fmt.Errorf("line %d: %w", n, err)
+	}
+	return name, nil
+}
+
+// classify turns an error from validate into the line to print:
+// "empty", "fields", "parse: TEXT", or "range: ...".
+func classify(err error) string {
+	var re RangeError
+	if errors.As(err, &re) {
+		return re.Error()
+	}
+
+	var pe ParseError
+	if errors.As(err, &pe) {
+		return pe.Error()
+	}
+
+	if errors.Is(err, ErrEmpty) {
+		return "empty"
+	}
+
+	if errors.Is(err, ErrFields) {
+		return "fields"
+	}
+	return fmt.Sprintf("%v", err)
+}
 
 func main() {
 	sc := bufio.NewScanner(os.Stdin)
-	sc.Buffer(make([]byte, 1024*1024), 1024*1024)
-	var lines [][]string // each input line split into words: {"rect", "3", "4"}
+	n := 0
 	for sc.Scan() {
-		f := strings.Fields(sc.Text())
-		if len(f) > 0 {
-			lines = append(lines, f)
+		n++
+		name, err := validate(n, sc.Text())
+		if err != nil {
+			fmt.Println(classify(err))
+		} else {
+			fmt.Println("ok " + name)
 		}
-	}
-
-	// TODO: turn each line into a Shape (or remember its unknown kind),
-	// sort, print the shapes, the count line, then the unknown kinds.
-	_ = lines
-	num := len(lines)
-	shapes := make([]Shape, num)
-	rectCount, sqCount, triCount := 0, 0, 0
-
-	for i, val := range lines {
-		name := val[0]
-		switch name {
-		case "rect":
-			w, _ := strconv.Atoi(val[1])
-			h, _ := strconv.Atoi(val[2])
-			shapes[i] = Rect{w, h, i}
-			rectCount++
-		case "square":
-			s, _ := strconv.Atoi(val[1])
-			shapes[i] = Square{s, i}
-			sqCount++
-		case "tri":
-			b, _ := strconv.Atoi(val[1])
-			h, _ := strconv.Atoi(val[2])
-			shapes[i] = Tri{b, h, i}
-			triCount++
-		default:
-			shapes[i] = Unknown{name, i}
-		}
-
-	}
-
-	sort.Sort(byShape(shapes))
-
-	shouldPrintTotals := true
-	for i := len(shapes) - 1; i >= 0; i-- {
-		switch shapes[i].(type) {
-		case Rect, Tri, Square:
-			fmt.Println(shapes[i])
-		case Unknown:
-			if shouldPrintTotals {
-				fmt.Printf("rects=%d squares=%d tris=%d\n", rectCount, sqCount, triCount)
-			}
-			shouldPrintTotals = false
-			fmt.Println(shapes[i])
-		}
-	}
-	if shouldPrintTotals {
-		fmt.Printf("rects=%d squares=%d tris=%d\n", rectCount, sqCount, triCount)
 	}
 }
