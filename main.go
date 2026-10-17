@@ -107,6 +107,13 @@ type byShape []Shape
 
 func (s byShape) Len() int { return len(s) }
 func (s byShape) Less(i, j int) bool {
+	_, ok := s[j].(Unknown)
+	if ok {
+		_, ok = s[i].(Unknown)
+		if ok {
+			return s[i].Idx() > s[j].Idx()
+		}
+	}
 	if s[i].Area() == s[j].Area() {
 		if s[i].Name() == s[j].Name() {
 			return s[i].Idx() > s[j].Idx()
