@@ -12,8 +12,9 @@ import (
 // TODO: the Shape interface (Area() int and Name() string), the three
 // shape types, their String methods, and the sortable slice type.
 type Rect struct {
-	w int
-	h int
+	w   int
+	h   int
+	idx int
 }
 
 func (c Rect) Area() int {
@@ -28,8 +29,13 @@ func (c Rect) String() string {
 	return fmt.Sprintf("rect %dx%d area=%d", c.w, c.h, c.Area())
 }
 
+func (c Rect) Idx() int {
+	return c.idx
+}
+
 type Square struct {
-	s int
+	s   int
+	idx int
 }
 
 func (c Square) Area() int {
@@ -44,9 +50,14 @@ func (c Square) String() string {
 	return fmt.Sprintf("square %d area=%d", c.s, c.Area())
 }
 
+func (c Square) Idx() int {
+	return c.idx
+}
+
 type Tri struct {
-	b int
-	h int
+	b   int
+	h   int
+	idx int
 }
 
 func (c Tri) Area() int {
@@ -61,8 +72,13 @@ func (c Tri) String() string {
 	return fmt.Sprintf("tri %dx%d area=%d", c.b, c.h, c.Area())
 }
 
+func (c Tri) Idx() int {
+	return c.idx
+}
+
 type Unknown struct {
 	name string
+	idx  int
 }
 
 func (Unknown) Area() int {
@@ -77,9 +93,14 @@ func (c Unknown) String() string {
 	return fmt.Sprintf("unknown: " + c.name)
 }
 
+func (c Unknown) Idx() int {
+	return c.idx
+}
+
 type Shape interface {
 	Area() int
 	Name() string
+	Idx() int
 }
 
 type byShape []Shape
@@ -87,6 +108,9 @@ type byShape []Shape
 func (s byShape) Len() int { return len(s) }
 func (s byShape) Less(i, j int) bool {
 	if s[i].Area() == s[j].Area() {
+		if s[i].Name() == s[j].Name() {
+			return s[i].Idx() > s[j].Idx()
+		}
 		return s[i].Name() > s[j].Name()
 	}
 	return s[i].Area() < s[j].Area()
@@ -129,19 +153,19 @@ func main() {
 		case "rect":
 			w, _ := strconv.Atoi(val[1])
 			h, _ := strconv.Atoi(val[2])
-			shapes[i] = Rect{w, h}
+			shapes[i] = Rect{w, h, i}
 			rectCount++
 		case "square":
 			s, _ := strconv.Atoi(val[1])
-			shapes[i] = Square{s}
+			shapes[i] = Square{s, i}
 			sqCount++
 		case "tri":
 			b, _ := strconv.Atoi(val[1])
 			h, _ := strconv.Atoi(val[2])
-			shapes[i] = Tri{b, h}
+			shapes[i] = Tri{b, h, i}
 			triCount++
 		default:
-			shapes[i] = Unknown{name}
+			shapes[i] = Unknown{name, i}
 		}
 
 	}
