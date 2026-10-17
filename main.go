@@ -64,8 +64,8 @@ func check(line string) (string, error) {
 		return "", ParseError{split[2]}
 	}
 
-	if score < 0 || score > 150 {
-		return "", RangeError{"score", 0, 150, score}
+	if score < 0 || score > 100 {
+		return "", RangeError{"score", 0, 100, score}
 	}
 
 	return split[0], nil
