@@ -21,20 +21,25 @@ type UpperWriter struct {
 }
 
 func (c *CountingWriter) Write(p []byte) (int, error) {
-	n, err := c.Writer.Write(p)
+	c.Bytes += len(p)
+	c.Lines += bytes.Count(p, []byte("\n"))
 
-	c.Bytes += n
-	c.Lines += bytes.Count(p[:n], []byte("\n"))
-
-	return n, err
+	return c.Writer.Write(p)
 }
 
 func (u UpperWriter) Write(p []byte) (int, error) {
-
 	upperBytes := bytes.ToUpper(p)
 
-	return u.Writer.Write(upperBytes)
+	n, err := u.Writer.Write(upperBytes)
+	if err != nil {
+		return 0, err
+	}
 
+	if n != len(upperBytes) {
+		return 0, io.ErrShortWrite
+	}
+
+	return len(p), nil
 }
 
 // TODO: Write on CountingWriter
