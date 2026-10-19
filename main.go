@@ -53,6 +53,18 @@ func (acs *Accounts) NewAccount(name string) (bool, error) {
 	return true, nil
 }
 
+func (acs *Accounts) Len() int {
+	return len(*acs)
+}
+
+func (acs *Accounts) Less(i, j int) bool {
+	return (*acs)[i].name < (*acs)[j].name
+}
+
+func (acs *Accounts) Swap(i, j int) {
+	(*acs)[i], (*acs)[j] = (*acs)[j], (*acs)[i]
+}
+
 func (acs *Accounts) Transfer(from string, to string, amount int) (bool, error) {
 	fromAcc, err := acs.Get(from)
 	if err != nil {
@@ -123,6 +135,7 @@ func (acs *Accounts) Get(name string) (*Account, error) {
 }
 
 func (acs *Accounts) Report() {
+	sort.Sort(acs)
 	for _, a := range *acs {
 		fmt.Printf("%s %d\n", a.name, a.balance)
 	}
