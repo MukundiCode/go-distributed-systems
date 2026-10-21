@@ -2,79 +2,112 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
-	"io"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 )
 
-// Both wrappers embed io.Writer, so until you give them their own Write
-// they pass text through untouched.
-type CountingWriter struct {
-	io.Writer
-	Bytes int
-	Lines int
+// serve prints one item. An item that starts with "+" also queues the rest
+// of its text as a brand-new urgent item.
+func serve(x string, urgent chan<- string) {
+	fmt.Println("served:", x)
+	if strings.HasPrefix(x, "+") {
+		urgent <- x[1:]
+	}
 }
 
-type UpperWriter struct {
-	io.Writer
-}
+// drain serves every item: urgent before normal before low, re-checking
+// urgent before each pick. normal and low are closed once loaded; urgent
+// is never closed. Return when nothing is left.
+func drain(urgent chan string, normal, low <-chan string) {
 
-func (c *CountingWriter) Write(p []byte) (int, error) {
-	c.Bytes += len(p)
-	c.Lines += bytes.Count(p, []byte("\n"))
+	for urgent != nil {
+		select {
+		case u := <-urgent:
+			serve(u, urgent)
+			continue
+		default:
+			if normal == nil && low == nil {
+				urgent = nil
+			}
 
-	return c.Writer.Write(p)
-}
+		}
 
-func (u UpperWriter) Write(p []byte) (int, error) {
-	upperBytes := bytes.ToUpper(p)
+		select {
+		case u, ok := <-normal:
+			if !ok {
+				normal = nil
+				break
+			}
+			serve(u, urgent)
+			continue
+		default:
+		}
 
-	n, err := u.Writer.Write(upperBytes)
-	if err != nil {
-		return 0, err
+		select {
+		case u, ok := <-low:
+			if !ok {
+				low = nil
+				break
+			}
+			serve(u, urgent)
+		default:
+
+		}
 	}
 
-	if n != len(upperBytes) {
-		return 0, io.ErrShortWrite
-	}
-
-	return len(p), nil
 }
 
-// TODO: Write on CountingWriter
-// TODO: Write on UpperWriter
+// awaitLate prints "late: <x>" if a value arrives on late within 100ms,
+// otherwise "idle".
+func awaitLate(late <-chan string) {
+	select {
+	case l := <-late:
+		fmt.Println("late: " + l)
+	case <-time.After(100 * time.Millisecond):
+		fmt.Println("idle")
+	}
+}
 
 func main() {
-	sc := bufio.NewScanner(os.Stdin)
-	sc.Buffer(make([]byte, 1024*1024), 1024*1024)
-	sc.Scan()
-	mode := sc.Text()
 	var lines []string
+	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
-		lines = append(lines, sc.Text())
+		if line := strings.TrimSpace(sc.Text()); line != "" {
+			lines = append(lines, line)
+		}
 	}
+	urgent := make(chan string, 1024)
+	normal := make(chan string, len(lines)+1)
+	low := make(chan string, len(lines)+1)
+	delay, lateVal, hasLate := 0, "", false
+	for _, line := range lines {
+		f := strings.Fields(line)
+		switch f[0] {
+		case "U":
+			urgent <- f[1]
+		case "N":
+			normal <- f[1]
+		case "L":
+			low <- f[1]
+		case "late":
+			delay, _ = strconv.Atoi(f[1])
+			lateVal, hasLate = f[2], true
+		}
+	}
+	close(normal)
+	close(low)
 
-	var w io.Writer = os.Stdout
-	var cw *CountingWriter
-	switch mode {
-	case "upper":
-		w = UpperWriter{Writer: w}
-	case "count":
-		cw = &CountingWriter{Writer: w}
-		w = cw
-	case "upper+count":
-		cw = &CountingWriter{Writer: w}
-		w = UpperWriter{Writer: cw}
-	case "count+upper":
-		cw = &CountingWriter{Writer: UpperWriter{Writer: w}}
-		w = cw
-	}
+	drain(urgent, normal, low)
 
-	for _, l := range lines {
-		fmt.Fprintln(w, l)
+	late := make(chan string, 1)
+	if hasLate {
+		go func() {
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+			late <- lateVal
+		}()
 	}
-	if cw != nil {
-		fmt.Printf("bytes=%d lines=%d\n", cw.Bytes, cw.Lines)
-	}
+	awaitLate(late)
 }
